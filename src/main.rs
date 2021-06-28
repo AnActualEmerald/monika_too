@@ -15,7 +15,11 @@ use discord::ChannelRef;
 use discord::Discord;
 use discord::State;
 use dotenv::dotenv;
+use mlua::prelude::*;
+use std::collections::HashMap;
 use std::env;
+use std::fs;
+use std::path::Path;
 
 fn main() {
     dotenv().ok();
@@ -30,6 +34,11 @@ fn main() {
     // connect to discord
     let (mut connection, rdy) = disc.connect().expect("Unable to connect");
     let mut state = State::new(rdy);
+
+    //load commands & set up lua environment
+    let commands = load_commands();
+    let lua = Lua::new();
+
     println!("Bot ready...");
     loop {
         let evnt = match connection.recv_event() {
@@ -89,8 +98,14 @@ fn main() {
                                 println!("Quitting.");
                                 break;
                             }
-                            _ => {
-                                eprintln!("Didn't find command {}", &command[0]);
+                            c => {
+                                if commands.contains_key(c) {
+                                    let src = &commands.get(c).unwrap().script;
+                                    let res = lua.load(&src).eval::<String>();
+                                    println!("{}", res.unwrap());
+                                } else {
+                                    break;
+                                }
                             }
                         }
                     }
@@ -100,4 +115,40 @@ fn main() {
             _ => {}
         }
     }
+}
+
+struct Command {
+    name: String,
+    script: String,
+}
+
+impl Command {
+    fn from_file(path: &str) -> Command {
+        if let Ok(src) = fs::read_to_string(path) {
+            return Command {
+                name: Path::new(path)
+                    .file_stem()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_owned(),
+                script: src,
+            };
+        } else {
+            panic!("Couldn't find command file at {}", path);
+        }
+    }
+}
+
+fn load_commands() -> HashMap<String, Command> {
+    let mut coms: HashMap<String, Command> = HashMap::new();
+    for entry in fs::read_dir("./commands").unwrap() {
+        let path = entry.unwrap().path();
+        coms.insert(
+            path.file_stem().unwrap().to_str().unwrap().to_owned(),
+            Command::from_file(path.to_str().unwrap()),
+        );
+    }
+
+    coms
 }

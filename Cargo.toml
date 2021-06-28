@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 discord = { git = "https://github.com/SpaceManiac/discord-rs" }
-mlua = { version = "0.6.1", features = ["lua54", "serialize"] }
+mlua = { version = "0.6.1", features = ["lua53", "vendored"] }
 diesel = { version = "1.4.4", features = ["sqlite"] }
 dotenv = "0.15.0"
-serde = "1.0.126"
