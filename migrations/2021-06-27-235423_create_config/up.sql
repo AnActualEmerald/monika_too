@@ -1,0 +1,4 @@
+CREATE TABLE configs (
+	server_id INTEGER PRIMARY KEY NOT NULL,
+	prefix TEXT NOT NULL DEFAULT "!"
+);
