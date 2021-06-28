@@ -10,6 +10,7 @@ mod utils;
 use utils::Replyable;
 
 use discord::model::Event;
+use discord::model::Permissions;
 use discord::ChannelRef;
 use discord::Discord;
 use discord::State;
@@ -45,20 +46,21 @@ fn main() {
         state.update(&evnt);
         match evnt {
             Event::MessageCreate(message) => match state.find_channel(message.channel_id) {
-                Some(ChannelRef::Public(server, _channel)) => {
+                Some(ChannelRef::Public(server, channel)) => {
                     if message.author.bot {
                         // skip messages from bot users
                         continue;
                     }
-                    let prefix = if let Some(cfg) = config.get_server_config(server.id.0) {
-                        cfg[0].prefix.clone()
+                    let prefix = if let Some(prf) = config.get_prefix(server.id.0) {
+                        prf
                     } else {
-                        config.add_server(server.id.0 as i32);
+                        config.add_server(server.id.0);
                         "!".to_owned()
                     };
                     //TODO: Set up proper logging
                     println!("{} says: {}", message.author.name, message.content);
                     if message.content.starts_with(&prefix) {
+                        let perms = server.permissions_for(channel.id, message.author.id);
                         let command: Vec<&str> = message
                             .content
                             .split_once(&prefix)
@@ -77,6 +79,7 @@ fn main() {
                                 );
                             }
                             "prefix" => {
+                                perms.contains(Permissions::ADMINISTRATOR);
                                 config.set_prefix(server.id.0, command[1]);
                                 message.reply(&disc, &format!("prefix changed to {}", command[1]))
                             }
