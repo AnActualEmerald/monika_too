@@ -15,10 +15,10 @@ impl Database {
         }
     }
 
-    pub fn add_server(&self, id: i32) {
+    pub fn add_server(&self, id: u64) {
         diesel::insert_into(configs)
             .values(NewConfig {
-                server_id: &id,
+                server_id: &(id as i32),
                 prefix: "!",
             })
             .execute(&self.connection)

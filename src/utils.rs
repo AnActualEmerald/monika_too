@@ -15,3 +15,20 @@ impl Replyable for Message {
         );
     }
 }
+
+#[macro_export]
+macro_rules! string {
+    ($a:literal) => {
+        String::from($a)
+    };
+    ($a:expr) => {
+        String::from($a)
+    };
+}
+
+// #[macro_export]
+// macro_rules! box {
+//     ($a:expr) => {
+//         Box::new($a)
+//     };
+// }

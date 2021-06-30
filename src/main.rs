@@ -2,6 +2,7 @@
 extern crate diesel;
 extern crate dotenv;
 
+mod commands;
 mod db;
 mod models;
 mod schema;
@@ -29,6 +30,7 @@ fn main() {
     // connect to discord
     let (mut connection, rdy) = disc.connect().expect("Unable to connect");
     let mut state = State::new(rdy);
+    let coms = commands::get_commands();
     println!("Bot ready...");
     loop {
         let evnt = match connection.recv_event() {
@@ -53,12 +55,13 @@ fn main() {
                     let prefix = if let Some(cfg) = config.get_server_config(server.id.0) {
                         cfg[0].prefix.clone()
                     } else {
-                        config.add_server(server.id.0 as i32);
-                        "!".to_owned()
+                        config.add_server(server.id.0);
+                        string!("!")
                     };
                     //TODO: Set up proper logging
                     println!("{} says: {}", message.author.name, message.content);
-                    if message.content.starts_with(&prefix) {
+                    let is_com = message.content.starts_with(&prefix);
+                    if is_com {
                         let command: Vec<&str> = message
                             .content
                             .split_once(&prefix)
@@ -66,6 +69,11 @@ fn main() {
                             .1
                             .split(" ")
                             .collect();
+                        let args = if command.len() > 1 {
+                            command[1].clone().split(" ").map(|e| string!(e)).collect()
+                        } else {
+                            vec![string!("")]
+                        };
                         println!("Found command {}", command[0]);
                         match command[0] {
                             "test" => {
@@ -86,8 +94,10 @@ fn main() {
                                 println!("Quitting.");
                                 break;
                             }
-                            _ => {
-                                eprintln!("Didn't find command {}", &command[0]);
+                            c => {
+                                if let Some(command_func) = coms.get(c) {
+                                    command_func(&disc, message, args);
+                                }
                             }
                         }
                     }
